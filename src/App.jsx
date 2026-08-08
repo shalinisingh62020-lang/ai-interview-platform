@@ -1,34 +1,34 @@
-import Questions from "./pages/Questions";
+
 import { Routes, Route } from "react-router-dom";
-import Navbar from "./component/Navbar";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Interview from "./pages/Interview";
-import Signup from "./pages/Signup";
+import Questions from "./pages/Questions";
 import Results from "./pages/Results";
+import Resume from "./pages/Resume";
+
 function App() {
   return (
-    <>
-    <Navbar />
-      <Routes>
+    <Routes>
+      <Route path="/" element={<Home />} />
 
-        <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
 
-        <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
-        <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard" element={<Dashboard />} />
 
-        <Route path="/interview" element={<Interview />} />
+      <Route path="/interview" element={<Interview />} />
 
-        <Route path="/signup" element={<Signup />} />
+      <Route path="/questions" element={<Questions />} />
 
-        <Route path="/questions" element={<Questions />} />
+      <Route path="/results" element={<Results />} />
 
-        <Route path="/results" element={<Results />} />
+      <Route path="/resume" element={<Resume />} />
 
-      </Routes>
-      </>
+    </Routes>
   );
 }
 
