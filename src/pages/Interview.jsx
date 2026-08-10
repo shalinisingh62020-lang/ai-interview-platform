@@ -23,78 +23,164 @@ function Interview() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
+    <div className="min-h-screen bg-gray-50 px-6 py-12">
 
-        <h1 className="text-3xl font-bold text-center text-blue-600 mb-3">
-          AI Mock Interview 🤖
-        </h1>
+      <div className="max-w-3xl mx-auto">
 
-        <p className="text-gray-600 text-center mb-8">
-          Select your role and experience level to start your interview.
-        </p>
+        {/* Header */}
+        <div className="text-center mb-10">
 
-        {/* Job Role */}
-        <div className="mb-5">
-          <label className="block font-semibold text-gray-700 mb-2">
-            Job Role
-          </label>
+          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+            🤖 AI-Powered Interview
+          </div>
 
-          <select
-            value={jobRole}
-            onChange={(e) => setJobRole(e.target.value)}
-            className="w-full border rounded-lg p-3"
-          >
-            <option value="">Select Job Role</option>
-            <option value="Frontend Developer">Frontend Developer</option>
-            <option value="Backend Developer">Backend Developer</option>
-            <option value="Full Stack Developer">
-              Full Stack Developer
-            </option>
-            <option value="Python Developer">Python Developer</option>
-            <option value="Java Developer">Java Developer</option>
-            <option value="Cybersecurity Analyst">
-              Cybersecurity Analyst
-            </option>
-          </select>
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            AI Mock Interview
+          </h1>
+
+          <p className="text-gray-600">
+            Choose your role and experience level to begin your
+            personalized interview.
+          </p>
+
         </div>
 
-        {/* Experience */}
-        <div className="mb-6">
-          <label className="block font-semibold text-gray-700 mb-2">
-            Experience Level
-          </label>
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
 
-          <select
-            value={experience}
-            onChange={(e) => setExperience(e.target.value)}
-            className="w-full border rounded-lg p-3"
+          {/* Job Role */}
+          <div className="mb-6">
+
+            <label className="block font-semibold text-gray-800 mb-2">
+              Job Role
+            </label>
+
+            <select
+              value={jobRole}
+              onChange={(e) => setJobRole(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-3 bg-white text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+            >
+              <option value="">
+                Select Job Role
+              </option>
+
+              <option value="Frontend Developer">
+                Frontend Developer
+              </option>
+
+              <option value="Backend Developer">
+                Backend Developer
+              </option>
+
+              <option value="Full Stack Developer">
+                Full Stack Developer
+              </option>
+
+              <option value="Python Developer">
+                Python Developer
+              </option>
+
+              <option value="Java Developer">
+                Java Developer
+              </option>
+
+              <option value="Cybersecurity Analyst">
+                Cybersecurity Analyst
+              </option>
+            </select>
+
+          </div>
+
+          {/* Experience */}
+          <div className="mb-8">
+
+            <label className="block font-semibold text-gray-800 mb-2">
+              Experience Level
+            </label>
+
+            <select
+              value={experience}
+              onChange={(e) => setExperience(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-3 bg-white text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+            >
+              <option value="">
+                Select Experience
+              </option>
+
+              <option value="Fresher">
+                Fresher
+              </option>
+
+              <option value="1-2 Years">
+                1-2 Years
+              </option>
+
+              <option value="3-5 Years">
+                3-5 Years
+              </option>
+
+              <option value="5+ Years">
+                5+ Years
+              </option>
+            </select>
+
+          </div>
+
+          {/* Start Interview */}
+          <button
+            onClick={handleStartInterview}
+            className="w-full bg-blue-600 text-white py-3.5 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
           >
-            <option value="">Select Experience</option>
-            <option value="Fresher">Fresher</option>
-            <option value="1-2 Years">1-2 Years</option>
-            <option value="3-5 Years">3-5 Years</option>
-            <option value="5+ Years">5+ Years</option>
-          </select>
+            Start Interview 🚀
+          </button>
+
+          {/* Back */}
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="w-full mt-3 border border-gray-300 text-gray-700 py-3.5 rounded-lg font-semibold hover:bg-gray-50 transition"
+          >
+            ← Back to Dashboard
+          </button>
+
         </div>
 
-        {/* Start */}
-        <button
-          onClick={handleStartInterview}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
-        >
-          Start Interview 🚀
-        </button>
+        {/* Info */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
 
-        {/* Back */}
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="w-full mt-3 border border-gray-400 text-gray-700 py-3 rounded-lg hover:bg-gray-100"
-        >
-          Back to Dashboard
-        </button>
+          <div className="bg-white border border-gray-100 rounded-xl p-4 text-center">
+            <div className="text-2xl mb-1">🎯</div>
+            <p className="text-sm font-semibold text-gray-800">
+              Role Based
+            </p>
+            <p className="text-xs text-gray-500">
+              Questions matched to your role
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-xl p-4 text-center">
+            <div className="text-2xl mb-1">🤖</div>
+            <p className="text-sm font-semibold text-gray-800">
+              AI Evaluation
+            </p>
+            <p className="text-xs text-gray-500">
+              Get feedback on your answers
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-xl p-4 text-center">
+            <div className="text-2xl mb-1">📊</div>
+            <p className="text-sm font-semibold text-gray-800">
+              Performance
+            </p>
+            <p className="text-xs text-gray-500">
+              Track your interview progress
+            </p>
+          </div>
+
+        </div>
 
       </div>
+
     </div>
   );
 }

@@ -1,140 +1,272 @@
 
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Results() {
-  const location = useLocation();
   const navigate = useNavigate();
 
-  const {
-    totalQuestions = 5,
-    answered = 0,
-    score = 0,
-    feedback = "Keep practicing!",
-    evaluatedAnswers = [],
-  } = location.state || {};
+  const [result, setResult] = useState(null);
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+  useEffect(() => {
+    const savedResult = localStorage.getItem("interviewResults");
 
-        <h1 className="text-3xl font-bold text-center text-blue-600 mb-2">
-          Interview Results 🎉
-        </h1>
+    if (savedResult) {
+      try {
+        setResult(JSON.parse(savedResult));
+      } catch (error) {
+        console.error("Result parsing error:", error);
+      }
+    }
+  }, []);
 
-        <p className="text-center text-gray-500 mb-8">
-          Here is your interview performance.
-        </p>
+  if (!result) {
+    return (
+      <div className="min-h-screen bg-gray-50 px-6 py-12 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center max-w-md w-full">
 
-        {/* Score */}
-        <div className="bg-blue-50 rounded-xl p-8 text-center mb-6">
-          <p className="text-gray-600 mb-2">
-            Your Score
-          </p>
-
-          <p className="text-6xl font-bold text-blue-600">
-            {score}%
-          </p>
-        </div>
-
-        {/* Statistics */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-
-          <div className="bg-gray-50 rounded-xl p-5 text-center">
-            <p className="text-gray-500">
-              Total Questions
-            </p>
-
-            <p className="text-3xl font-bold mt-2">
-              {totalQuestions}
-            </p>
+          <div className="text-5xl mb-5">
+            📊
           </div>
 
-          <div className="bg-gray-50 rounded-xl p-5 text-center">
-            <p className="text-gray-500">
-              Answered
-            </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">
+            No Interview Results
+          </h1>
 
-            <p className="text-3xl font-bold text-green-600 mt-2">
-              {answered}
-            </p>
-          </div>
-
-        </div>
-
-        {/* Feedback */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 mb-8">
-          <h2 className="font-bold text-lg mb-2">
-            Overall Feedback 💡
-          </h2>
-
-          <p className="text-gray-700">
-            {feedback}
+          <p className="text-gray-600 mb-6">
+            Complete an interview first to see your AI-generated performance report.
           </p>
-        </div>
-
-        {/* Individual Results */}
-        {evaluatedAnswers.length > 0 && (
-          <div className="mb-8">
-
-            <h2 className="text-2xl font-bold mb-4">
-              Answer Evaluation 📝
-            </h2>
-
-            <div className="space-y-4">
-
-              {evaluatedAnswers.map((item) => (
-                <div
-                  key={item.questionNumber}
-                  className="border rounded-xl p-5"
-                >
-
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-semibold">
-                      Question {item.questionNumber}
-                    </h3>
-
-                    <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg font-bold">
-                      {item.score}%
-                    </span>
-                  </div>
-
-                  <p className="text-gray-600 mb-3">
-                    <strong>Your Answer:</strong>{" "}
-                    {item.answer || "No answer provided"}
-                  </p>
-
-                  <p className="text-gray-700">
-                    <strong>Feedback:</strong>{" "}
-                    {item.feedback}
-                  </p>
-
-                </div>
-              ))}
-
-            </div>
-          </div>
-        )}
-
-        {/* Buttons */}
-        <div className="space-y-3">
 
           <button
             onClick={() => navigate("/interview")}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
           >
-            🔄 Retake Interview
+            Start Interview 🚀
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+  const score = Number(result.score) || 0;
+
+  let scoreMessage = "Keep practicing! 💪";
+
+  if (score >= 80) {
+    scoreMessage = "Excellent performance! 🌟";
+  } else if (score >= 60) {
+    scoreMessage = "Good performance! 👍";
+  } else if (score >= 40) {
+    scoreMessage = "You're making progress! 🚀";
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 px-6 py-12">
+
+      <div className="max-w-5xl mx-auto">
+
+        {/* Header */}
+        <div className="text-center mb-8">
+
+          <div className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+            AI Interview Report
+          </div>
+
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Interview Results 🎉
+          </h1>
+
+          <p className="text-gray-600">
+            Here's a detailed analysis of your interview performance.
+          </p>
+
+        </div>
+
+        {/* Overall Score */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8 text-center">
+
+          <p className="text-gray-500 font-medium mb-2">
+            Overall Score
+          </p>
+
+          <div className="text-6xl font-bold text-blue-600 mb-3">
+            {score}
+            <span className="text-2xl text-gray-400">
+              /100
+            </span>
+          </div>
+
+          <p className="text-lg font-semibold text-gray-800 mb-2">
+            {scoreMessage}
+          </p>
+
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            {result.feedback}
+          </p>
+
+        </div>
+
+        {/* Individual Evaluations */}
+        <div className="space-y-6">
+
+          {result.evaluatedAnswers?.map((item, index) => (
+
+            <div
+              key={index}
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+            >
+
+              {/* Question Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+
+                <h2 className="text-xl font-bold text-gray-900">
+                  Question {item.questionNumber}
+                </h2>
+
+                <span className="inline-flex items-center justify-center bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-bold">
+                  {item.score}/100
+                </span>
+
+              </div>
+
+              {/* Question */}
+              <div className="mb-5">
+
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Question
+                </p>
+
+                <p className="text-gray-800 font-medium">
+                  {item.question ||
+                    `Question ${item.questionNumber}`}
+                </p>
+
+              </div>
+
+              {/* Answer */}
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-5 mb-5">
+
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Your Answer
+                </p>
+
+                <p className="text-gray-700 leading-relaxed">
+                  {item.answer || "No answer provided."}
+                </p>
+
+              </div>
+
+              {/* AI Feedback */}
+              <div className="mb-5">
+
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  AI Feedback
+                </p>
+
+                <p className="text-gray-700 leading-relaxed">
+                  {item.feedback || "No feedback available."}
+                </p>
+
+              </div>
+
+              {/* Strengths & Improvements */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                {/* Strengths */}
+                <div className="bg-green-50 border border-green-100 rounded-xl p-5">
+
+                  <h3 className="font-bold text-gray-900 mb-3">
+                    ✅ Strengths
+                  </h3>
+
+                  {item.strengths?.length > 0 ? (
+                    <ul className="space-y-2 text-gray-700">
+
+                      {item.strengths.map((strength, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="text-green-600">
+                            •
+                          </span>
+
+                          <span>
+                            {strength}
+                          </span>
+                        </li>
+                      ))}
+
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500">
+                      No strengths provided.
+                    </p>
+                  )}
+
+                </div>
+
+                {/* Improvements */}
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-5">
+
+                  <h3 className="font-bold text-gray-900 mb-3">
+                    🎯 Areas to Improve
+                  </h3>
+
+                  {item.improvements?.length > 0 ? (
+                    <ul className="space-y-2 text-gray-700">
+
+                      {item.improvements.map(
+                        (improvement, i) => (
+                          <li key={i} className="flex gap-2">
+
+                            <span className="text-orange-600">
+                              •
+                            </span>
+
+                            <span>
+                              {improvement}
+                            </span>
+
+                          </li>
+                        )
+                      )}
+
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500">
+                      No improvements provided.
+                    </p>
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+        {/* Buttons */}
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+
+          <button
+            onClick={() => navigate("/interview")}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+          >
+            Take Another Interview
           </button>
 
           <button
             onClick={() => navigate("/dashboard")}
-            className="w-full border border-gray-400 text-gray-700 py-3 rounded-lg hover:bg-gray-100"
+            className="px-6 py-3 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-800 transition"
           >
-            🏠 Back to Dashboard
+            ← Dashboard
           </button>
 
         </div>
 
       </div>
+
     </div>
   );
 }

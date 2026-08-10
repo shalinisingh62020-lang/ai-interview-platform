@@ -16,12 +16,20 @@ function Questions() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answer, setAnswer] = useState("");
   const [answers, setAnswers] = useState([]);
-  const [evaluating, setEvaluating] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const nextQuestion = () => {
+    if (!answer.trim()) {
+      alert("Please enter your answer first.");
+      return;
+    }
+
     const updatedAnswers = [...answers];
 
-    updatedAnswers[currentQuestion] = answer;
+    updatedAnswers[currentQuestion] = {
+      question: questions[currentQuestion],
+      answer: answer.trim(),
+    };
 
     setAnswers(updatedAnswers);
 
@@ -29,33 +37,37 @@ function Questions() {
       const nextIndex = currentQuestion + 1;
 
       setCurrentQuestion(nextIndex);
-      setAnswer(updatedAnswers[nextIndex] || "");
+      setAnswer(updatedAnswers[nextIndex]?.answer || "");
     } else {
-      finishInterview(updatedAnswers);
+      evaluateInterview(updatedAnswers);
     }
   };
 
   const previousQuestion = () => {
+    if (currentQuestion === 0) {
+      return;
+    }
+
     const updatedAnswers = [...answers];
 
-    updatedAnswers[currentQuestion] = answer;
+    updatedAnswers[currentQuestion] = {
+      question: questions[currentQuestion],
+      answer: answer.trim(),
+    };
 
     setAnswers(updatedAnswers);
 
-    if (currentQuestion > 0) {
-      const previousIndex = currentQuestion - 1;
+    const previousIndex = currentQuestion - 1;
 
-      setCurrentQuestion(previousIndex);
-      setAnswer(updatedAnswers[previousIndex] || "");
-    }
+    setCurrentQuestion(previousIndex);
+    setAnswer(updatedAnswers[previousIndex]?.answer || "");
   };
 
-  const finishInterview = async (finalAnswers) => {
-    setEvaluating(true);
-
+  const evaluateInterview = async (finalAnswers) => {
     try {
-      // Save answers in MongoDB
-      await fetch("http://localhost:5000/answers", {
+      setLoading(true);
+
+      const response = await fetch("http://localhost:5000/evaluate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -65,105 +77,78 @@ function Questions() {
         }),
       });
 
-      // Evaluate answers
-      const evaluationResponse = await fetch(
-        "http://localhost:5000/evaluate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            answers: finalAnswers,
-          }),
-        }
-      );
+      const data = await response.json();
 
-      const evaluationData = await evaluationResponse.json();
-
-      if (!evaluationResponse.ok) {
+      if (!response.ok) {
         throw new Error(
-          evaluationData.message || "Evaluation failed"
+          data.message || "AI evaluation failed"
         );
       }
 
-      navigate("/results", {
-        state: {
-          totalQuestions: questions.length,
-          answered: finalAnswers.filter(
-            (item) => item && item.trim() !== ""
-          ).length,
-          score: evaluationData.score,
-          feedback: evaluationData.feedback,
-          evaluatedAnswers: evaluationData.evaluatedAnswers,
-        },
-      });
-    } catch (error) {
-      console.log("Evaluation error:", error);
+      // Save complete evaluation result
+      localStorage.setItem(
+        "interviewResults",
+        JSON.stringify(data)
+      );
 
-      alert("Could not evaluate interview. Please try again.");
-      setEvaluating(false);
+      navigate("/results");
+    } catch (error) {
+      console.error("AI Evaluation Error:", error);
+
+      alert(
+        "AI evaluation failed. Please check that the backend and OpenAI API are running."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (evaluating) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-          <h2 className="text-2xl font-bold text-blue-600 mb-3">
-            Evaluating Your Interview 🤖
-          </h2>
-
-          <p className="text-gray-600">
-            Please wait while we calculate your score...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-8">
 
-        <h1 className="text-3xl font-bold text-center text-blue-600 mb-6">
-          AI Interview 🤖
+        <h1 className="text-3xl font-bold text-center mb-6">
+          AI Mock Interview
         </h1>
 
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <p className="font-semibold text-gray-700">
+        <div className="mb-6">
+          <p className="text-gray-500 mb-2">
             Question {currentQuestion + 1} of {questions.length}
           </p>
-        </div>
 
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">
-          {questions[currentQuestion]}
-        </h2>
+          <h2 className="text-xl font-semibold">
+            {questions[currentQuestion]}
+          </h2>
+        </div>
 
         <textarea
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder="Type your answer here..."
-          className="w-full border rounded-lg p-4 h-40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={loading}
+          className="w-full h-40 border border-gray-300 rounded-lg p-4 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
-        <div className="flex justify-between mt-6">
+        <div className="flex justify-between">
 
           <button
             onClick={previousQuestion}
-            disabled={currentQuestion === 0}
-            className="bg-gray-500 text-white px-6 py-3 rounded-lg disabled:opacity-50"
+            disabled={currentQuestion === 0 || loading}
+            className="px-5 py-2 bg-gray-500 text-white rounded-lg disabled:opacity-50"
           >
             Previous
           </button>
 
           <button
             onClick={nextQuestion}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+            disabled={loading}
+            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            {currentQuestion === questions.length - 1
+            {loading
+              ? "AI Evaluating..."
+              : currentQuestion === questions.length - 1
               ? "Finish Interview"
-              : "Next Question"}
+              : "Next"}
           </button>
 
         </div>

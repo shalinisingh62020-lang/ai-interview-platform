@@ -1,4 +1,5 @@
-
+import fs from "fs";
+import { PDFParse } from "pdf-parse";
 import multer from "multer";
 import express from "express";
 import cors from "cors";
@@ -7,31 +8,47 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import Answer from "./models/Answer.js";
 import User from "./models/User.js";
+import OpenAI from "openai";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
+console.log(
+  "JWT_SECRET loaded:",
+  !!process.env.JWT_SECRET
+);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const app = express();
+
 const upload = multer({
   dest: "uploads/",
 });
 
+app.use(cors());
+app.use(express.json());
 
-// MongoDB Connection
+
+// =====================================================
+// MONGODB CONNECTION
+// =====================================================
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected ✅");
   })
-  .catch((err) => {
-    console.log("MongoDB Connection Error ❌", err);
+  .catch((error) => {
+    console.log("MongoDB Connection Error ❌");
+    console.log(error.message);
   });
 
-const app = express();
 
-app.use(cors());
-app.use(express.json());
-
-// =========================
+// =====================================================
 // HOME
-// =========================
+// =====================================================
 
 app.get("/", (req, res) => {
   res.json({
@@ -39,9 +56,10 @@ app.get("/", (req, res) => {
   });
 });
 
-// =========================
+
+// =====================================================
 // SIGNUP
-// =========================
+// =====================================================
 
 app.post("/signup", async (req, res) => {
   try {
@@ -53,7 +71,9 @@ app.post("/signup", async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      email,
+    });
 
     if (existingUser) {
       return res.status(400).json({
@@ -61,7 +81,10 @@ app.post("/signup", async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      10
+    );
 
     const newUser = new User({
       name,
@@ -74,6 +97,7 @@ app.post("/signup", async (req, res) => {
     res.status(201).json({
       message: "Account created successfully 🎉",
     });
+
   } catch (error) {
     console.log(error);
 
@@ -84,9 +108,10 @@ app.post("/signup", async (req, res) => {
   }
 });
 
-// =========================
+
+// =====================================================
 // LOGIN
-// =========================
+// =====================================================
 
 app.post("/login", async (req, res) => {
   try {
@@ -98,7 +123,9 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+    });
 
     if (!user) {
       return res.status(401).json({
@@ -117,46 +144,45 @@ app.post("/login", async (req, res) => {
       });
     }
 
+    // Create JWT token
+    const token = jwt.sign(
+      {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
+
     res.json({
       message: "Login successful 🎉",
+      token: token,
+
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
       },
     });
+
   } catch (error) {
-    console.log(error);
+    console.log("Login error:", error);
 
     res.status(500).json({
       message: "Login failed",
-      error: error.message,
     });
   }
 });
-
-// =========================
-// QUESTIONS
-// =========================
-
-app.get("/questions", (req, res) => {
-  const questions = [
-    "Tell me about yourself.",
-    "What is React?",
-    "What is Virtual DOM?",
-    "Difference between let, var and const?",
-    "Explain useState Hook.",
-  ];
-
-  res.json(questions);
-});
-
-// =========================
+// =====================================================
 // SAVE INTERVIEW ANSWERS
-// =========================
+// =====================================================
 
 app.post("/answers", async (req, res) => {
   try {
+
     const { answers } = req.body;
 
     if (!answers || !Array.isArray(answers)) {
@@ -172,10 +198,14 @@ app.post("/answers", async (req, res) => {
     await newAnswer.save();
 
     res.json({
-      message: "Answers saved in MongoDB successfully 🚀",
+      message:
+        "Answers saved in MongoDB successfully 🚀",
+
       data: newAnswer,
     });
+
   } catch (error) {
+
     console.log(error);
 
     res.status(500).json({
@@ -185,11 +215,12 @@ app.post("/answers", async (req, res) => {
   }
 });
 
-// =========================
-// EVALUATE INTERVIEW
-// =========================
 
-app.post("/evaluate", (req, res) => {
+// =====================================================
+// AI EVALUATE INTERVIEW ANSWERS
+// =====================================================
+
+app.post("/evaluate", async (req, res) => {
   try {
     const { answers } = req.body;
 
@@ -199,112 +230,728 @@ app.post("/evaluate", (req, res) => {
       });
     }
 
-    let totalScore = 0;
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({
+        message: "OpenAI API key is not configured.",
+      });
+    }
 
-    const evaluatedAnswers = answers.map((answer, index) => {
-      const text = answer ? answer.trim() : "";
+    const evaluatedAnswers = [];
 
-      let score = 0;
-      let feedback = "";
+    for (let i = 0; i < answers.length; i++) {
+      const answerText =
+        typeof answers[i] === "string"
+          ? answers[i].trim()
+          : "";
 
-      if (text.length === 0) {
-        score = 0;
-        feedback = "No answer provided.";
-      } else if (text.length < 30) {
-        score = 40;
-        feedback = "Your answer is too short. Add more explanation.";
-      } else if (text.length < 80) {
-        score = 65;
-        feedback = "Good start. Try adding examples and more details.";
-      } else if (text.length < 150) {
-        score = 80;
-        feedback = "Good answer. It is reasonably clear and detailed.";
-      } else {
-        score = 90;
-        feedback = "Excellent detail. Your answer is clear and well explained.";
+      if (!answerText) {
+        evaluatedAnswers.push({
+          questionNumber: i + 1,
+          answer: "",
+          score: 0,
+          feedback: "No answer provided.",
+          strengths: [],
+          improvements: ["Provide an answer to the question."],
+        });
+
+        continue;
       }
 
-      totalScore += score;
+      const response = await openai.responses.create({
+        model: process.env.OPENAI_MODEL || "gpt-5",
 
-      return {
-        questionNumber: index + 1,
-        answer: text,
-        score: score,
-        feedback: feedback,
-      };
-    });
+        instructions: `
+You are an interview evaluator for a student preparing for technical interviews.
+
+Evaluate the candidate's answer fairly and constructively.
+
+Focus on:
+- Relevance
+- Technical correctness
+- Clarity
+- Completeness
+- Communication
+
+Do not judge the candidate's personality, appearance, accent, or background.
+
+Return ONLY valid JSON in this exact structure:
+
+{
+  "score": 0,
+  "feedback": "short detailed feedback",
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"]
+}
+
+The score must be an integer from 0 to 100.
+`,
+
+        input: `
+Interview Question:
+${answers[i].question || "Technical interview question"}
+
+Candidate Answer:
+${answerText}
+`,
+      });
+
+      let aiResult;
+
+      try {
+        aiResult = JSON.parse(response.output_text);
+      } catch (parseError) {
+        console.log(
+          "AI JSON parsing error:",
+          response.output_text
+        );
+
+        aiResult = {
+          score: 0,
+          feedback:
+            "The AI evaluation could not be processed.",
+          strengths: [],
+          improvements: [
+            "Please try submitting the answer again.",
+          ],
+        };
+      }
+
+      evaluatedAnswers.push({
+        questionNumber: i + 1,
+        answer: answerText,
+        score: Math.min(
+          100,
+          Math.max(0, Number(aiResult.score) || 0)
+        ),
+        feedback:
+          aiResult.feedback ||
+          "No feedback available.",
+        strengths: Array.isArray(aiResult.strengths)
+          ? aiResult.strengths
+          : [],
+        improvements: Array.isArray(
+          aiResult.improvements
+        )
+          ? aiResult.improvements
+          : [],
+      });
+    }
+
+    const totalScore = evaluatedAnswers.reduce(
+      (sum, item) => sum + item.score,
+      0
+    );
 
     const finalScore =
-      answers.length > 0
-        ? Math.round(totalScore / answers.length)
+      evaluatedAnswers.length > 0
+        ? Math.round(
+            totalScore / evaluatedAnswers.length
+          )
         : 0;
 
-    let overallFeedback = "";
+    let overallFeedback;
 
     if (finalScore >= 80) {
       overallFeedback =
-        "Excellent performance! Keep practicing to become even better. 🌟";
+        "Excellent performance! Your answers are strong and well explained. 🌟";
     } else if (finalScore >= 60) {
       overallFeedback =
-        "Good performance. Improve your explanations and examples. 👍";
+        "Good performance. Improve technical depth and examples to make your answers stronger. 👍";
     } else if (finalScore >= 40) {
       overallFeedback =
-        "You are making progress. Try giving more detailed answers. 💪";
+        "You are making progress. Focus on clarity, correctness, and providing better explanations. 💪";
     } else {
       overallFeedback =
-        "Keep practicing and try the interview again. 🚀";
+        "Keep practicing. Try to provide clearer and more complete answers. 🚀";
     }
 
     res.json({
       score: finalScore,
       feedback: overallFeedback,
-      evaluatedAnswers: evaluatedAnswers,
+      evaluatedAnswers,
     });
+
   } catch (error) {
-    console.log(error);
+    console.error(
+      "AI Evaluation Error:",
+      error
+    );
 
     res.status(500).json({
-      message: "Evaluation failed",
+      message: "AI evaluation failed",
       error: error.message,
     });
   }
 });
-// =========================
-// RESUME UPLOAD
-// =========================
+// =========================================
+// RESUME UPLOAD + PDF TEXT EXTRACTION + ANALYSIS
+// =====================================================
 
-app.post("/resume-upload", upload.single("resume"), (req, res) => {
+app.post(
+  "/resume-upload",
+  upload.single("resume"),
+  async (req, res) => {
+
+    try {
+
+      if (!req.file) {
+
+        return res.status(400).json({
+          message: "Please upload a resume",
+        });
+      }
+
+      console.log(
+        "Resume uploaded:",
+        req.file.originalname
+      );
+
+
+      // -------------------------------------------------
+      // READ PDF
+      // -------------------------------------------------
+
+      const pdfBuffer =
+        fs.readFileSync(req.file.path);
+
+
+      // -------------------------------------------------
+      // EXTRACT PDF TEXT
+      // -------------------------------------------------
+
+      const parser = new PDFParse({
+        data: pdfBuffer,
+      });
+
+      const pdfData =
+        await parser.getText();
+
+      const resumeText =
+        pdfData.text;
+
+      await parser.destroy();
+
+      console.log(
+        "Resume text extracted successfully ✅"
+      );
+
+
+      // -------------------------------------------------
+      // BASIC RESUME ANALYSIS
+      // -------------------------------------------------
+
+      const text =
+        resumeText.toLowerCase();
+
+
+      // -------------------------------------------------
+      // SKILLS LIST
+      // -------------------------------------------------
+
+      const skills = [
+
+        "javascript",
+        "react",
+        "node.js",
+        "python",
+        "java",
+        "c++",
+        "html",
+        "css",
+        "mongodb",
+        "postgresql",
+        "mysql",
+        "git",
+        "github",
+        "docker",
+        "aws",
+        "sql",
+        "express",
+        "typescript",
+        "tailwind",
+        "spring boot",
+
+      ];
+
+
+      // -------------------------------------------------
+      // FOUND SKILLS
+      // -------------------------------------------------
+
+      const foundSkills =
+        skills.filter((skill) =>
+          text.includes(
+            skill.toLowerCase()
+          )
+        );
+
+
+      // -------------------------------------------------
+      // MISSING SKILLS
+      // -------------------------------------------------
+
+      const missingSkills =
+        skills.filter(
+          (skill) =>
+            !text.includes(
+              skill.toLowerCase()
+            )
+        );
+
+
+      // -------------------------------------------------
+      // RESUME SCORE
+      // -------------------------------------------------
+
+      let score = 0;
+
+
+      // Skills
+      score += Math.min(
+        foundSkills.length * 4,
+        40
+      );
+
+
+      // Resume length
+      if (resumeText.length > 1500) {
+
+        score += 20;
+
+      } else if (
+        resumeText.length > 800
+      ) {
+
+        score += 10;
+      }
+
+
+      // Projects
+      if (
+        text.includes("project") ||
+        text.includes("projects")
+      ) {
+
+        score += 15;
+      }
+
+
+      // Experience
+      if (
+        text.includes("experience") ||
+        text.includes("internship")
+      ) {
+
+        score += 15;
+      }
+
+
+      // Education
+      if (
+        text.includes("education") ||
+        text.includes("b.tech") ||
+        text.includes("bachelor") ||
+        text.includes("degree")
+      ) {
+
+        score += 10;
+      }
+
+
+      // Maximum score
+      score = Math.min(
+        score,
+        100
+      );
+
+
+      // -------------------------------------------------
+      // SUGGESTIONS
+      // -------------------------------------------------
+
+      const suggestions = [];
+
+
+      if (
+        foundSkills.length < 5
+      ) {
+
+        suggestions.push(
+          "Add more relevant technical skills."
+        );
+      }
+
+
+      if (
+        !text.includes("project") &&
+        !text.includes("projects")
+      ) {
+
+        suggestions.push(
+          "Add projects with technologies and your contribution."
+        );
+      }
+
+
+      if (
+        !text.includes("experience") &&
+        !text.includes("internship")
+      ) {
+
+        suggestions.push(
+          "Add internship, training or practical experience if applicable."
+        );
+      }
+
+
+      if (
+        !text.includes("github")
+      ) {
+
+        suggestions.push(
+          "Add your GitHub profile to showcase your projects."
+        );
+      }
+
+
+      if (
+        !text.includes("linkedin")
+      ) {
+
+        suggestions.push(
+          "Add your LinkedIn profile."
+        );
+      }
+
+
+      if (
+        !text.includes("summary") &&
+        !text.includes("objective")
+      ) {
+
+        suggestions.push(
+          "Consider adding a short professional summary."
+        );
+      }
+
+
+      // -------------------------------------------------
+      // FINAL RESPONSE
+      // -------------------------------------------------
+
+      res.json({
+
+        message:
+          "Resume analyzed successfully 🎉",
+
+        fileName:
+          req.file.originalname,
+
+        fileSize:
+          req.file.size,
+
+        resumeText:
+          resumeText,
+
+        score:
+          score,
+
+        skills:
+          foundSkills,
+
+        missingSkills:
+          missingSkills,
+
+        suggestions:
+          suggestions,
+
+      });
+
+    } catch (error) {
+
+      console.log(
+        "Resume processing error:",
+        error
+      );
+
+      res.status(500).json({
+
+        message:
+          "Resume processing failed",
+
+        error:
+          error.message,
+
+      });
+    }
+  }
+);
+
+
+// =====================================================
+// START SERVER
+// =====================================================
+
+const PORT =
+  process.env.PORT || 5000;
+  app.post("/api/coding/submit", async (req, res) => {
   try {
-    if (!req.file) {
+    const { problemId, code } = req.body;
+
+    if (!problemId || !code) {
       return res.status(400).json({
-        message: "Please upload a resume",
+        success: false,
+        message: "Problem ID and code are required.",
       });
     }
 
-    console.log("Resume uploaded:", req.file.originalname);
+    const problem = codingProblems[problemId];
+
+    if (!problem) {
+      return res.status(404).json({
+        success: false,
+        message: "Coding problem not found.",
+      });
+    }
+
+    if (code.length > 20000) {
+      return res.status(400).json({
+        success: false,
+        message: "Code is too long.",
+      });
+    }
+
+    const results = [];
+
+    for (const test of problem.tests) {
+      const testProgram = `
+${code}
+
+try {
+  if (typeof ${problem.functionName} !== "function") {
+    throw new Error(
+      "Function ${problem.functionName} was not found."
+    );
+  }
+
+  const result = ${problem.functionName}(
+    ...${JSON.stringify(test.args)}
+  );
+
+  console.log(JSON.stringify(result));
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+`;
+
+      const createResponse = await fetch(
+        "https://ce.judge0.com/submissions/?base64_encoded=false&wait=false",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            source_code: testProgram,
+            language_id: 63,
+            cpu_time_limit: 2,
+            wall_time_limit: 5,
+            memory_limit: 128000,
+          }),
+        }
+      );
+
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+
+        return res.status(502).json({
+          success: false,
+          message: "Code execution service error.",
+          details: errorText,
+        });
+      }
+
+      const submission = await createResponse.json();
+
+      let executionResult = null;
+
+      for (let attempt = 0; attempt < 15; attempt++) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000)
+        );
+
+        const resultResponse = await fetch(
+          `https://ce.judge0.com/submissions/${submission.token}?base64_encoded=false`
+        );
+
+        executionResult = await resultResponse.json();
+
+        const statusId = executionResult.status?.id;
+
+        if (statusId >= 3) {
+          break;
+        }
+      }
+
+      if (!executionResult) {
+        results.push({
+          passed: false,
+          message: "Execution timed out.",
+        });
+
+        continue;
+      }
+
+      const statusId = executionResult.status?.id;
+
+      if (statusId !== 3) {
+        results.push({
+          passed: false,
+          message:
+            executionResult.status?.description ||
+            "Code execution failed.",
+          stderr: executionResult.stderr || null,
+          compileOutput:
+            executionResult.compile_output || null,
+        });
+
+        continue;
+      }
+
+      const actualOutput = (executionResult.stdout || "").trim();
+
+      const expectedOutput = JSON.stringify(test.expected);
+
+      const passed = actualOutput === expectedOutput;
+
+      results.push({
+        passed,
+        expected: expectedOutput,
+        actual: actualOutput,
+        time: executionResult.time || null,
+      });
+    }
+
+    const passedTests = results.filter(
+      (test) => test.passed
+    ).length;
+
+    const totalTests = results.length;
 
     res.json({
-      message: "Resume uploaded successfully 🎉",
-      fileName: req.file.originalname,
-      fileSize: req.file.size,
+      success: true,
+      passed: passedTests === totalTests,
+      passedTests,
+      totalTests,
+      results,
     });
-
   } catch (error) {
-    console.log("Resume upload error:", error);
+    console.error("Coding submission error:", error);
 
     res.status(500).json({
-      message: "Resume upload failed",
-      error: error.message,
+      success: false,
+      message: "Something went wrong while evaluating the code.",
     });
   }
 });
 
-// =========================
-// START SERVER
-// =========================
-
-const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+  console.log(
+    `Server running on port ${PORT}`
+  );
+
 });
+// Coding Practice
+const codingProblems = {
+  "two-sum": {
+    functionName: "twoSum",
+    tests: [
+      {
+        args: [[2, 7, 11, 15], 9],
+        expected: [0, 1],
+      },
+      {
+        args: [[3, 2, 4], 6],
+        expected: [1, 2],
+      },
+      {
+        args: [[3, 3], 6],
+        expected: [0, 1],
+      },
+    ],
+  },
+
+  "reverse-string": {
+    functionName: "reverseString",
+    tests: [
+      {
+        args: ["hello"],
+        expected: "olleh",
+      },
+      {
+        args: ["interview"],
+        expected: "weivretni",
+      },
+      {
+        args: ["abc"],
+        expected: "cba",
+      },
+    ],
+  },
+
+  "find-maximum": {
+    functionName: "findMaximum",
+    tests: [
+      {
+        args: [[10, 5, 25, 8]],
+        expected: 25,
+      },
+      {
+        args: [[-10, -5, -2, -20]],
+        expected: -2,
+      },
+      {
+        args: [[100, 20, 50]],
+        expected: 100,
+      },
+    ],
+  },
+
+  "palindrome": {
+    functionName: "isPalindrome",
+    tests: [
+      {
+        args: ["madam"],
+        expected: true,
+      },
+      {
+        args: ["racecar"],
+        expected: true,
+      },
+      {
+        args: ["hello"],
+        expected: false,
+      },
+    ],
+  },
+
+  "count-vowels": {
+    functionName: "countVowels",
+    tests: [
+      {
+        args: ["interview"],
+        expected: 4,
+      },
+      {
+        args: ["hello"],
+        expected: 2,
+      },
+      {
+        args: ["programming"],
+        expected: 3,
+      },
+    ],
+  },
+};

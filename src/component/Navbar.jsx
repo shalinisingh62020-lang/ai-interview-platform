@@ -3,32 +3,61 @@ import { Link } from "react-router-dom";
 function Navbar() {
   return (
     <nav className="bg-white shadow-md">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-8 py-4">
-        
-        <h1 className="text-2xl font-bold text-blue-600">
-          AI Interview
-        </h1>
+      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
-        <div className="flex gap-6 font-medium">
-          <Link to="/" className="hover:text-blue-600">
+        {/* Logo */}
+        <Link
+          to="/"
+          className="text-2xl font-bold text-blue-600"
+        >
+          AI Interview 🤖
+        </Link>
+
+        {/* Navigation */}
+        <div className="flex items-center gap-6 font-medium text-gray-700">
+
+          <Link
+            to="/"
+            className="hover:text-blue-600 transition"
+          >
             Home
           </Link>
 
-          <Link to="/login" className="hover:text-blue-600">
-            Login
-          </Link>
-
-          <Link to="/signup" className="hover:text-blue-600">
-            Signup
-          </Link>
-
-          <Link to="/dashboard" className="hover:text-blue-600">
+          <Link
+            to="/dashboard"
+            className="hover:text-blue-600 transition"
+          >
             Dashboard
           </Link>
 
-          <Link to="/interview" className="hover:text-blue-600">
+          <Link
+            to="/interview"
+            className="hover:text-blue-600 transition"
+          >
             Interview
           </Link>
+
+          <Link
+            to="/resume"
+            className="hover:text-blue-600 transition"
+          >
+            Resume
+          </Link>
+
+          <Link
+            to="/coding-practice"
+            className="hover:text-blue-600 transition"
+          >
+            Coding
+          </Link>
+
+          <Link
+            to="/login"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            Login
+          </Link>
+
         </div>
       </div>
     </nav>

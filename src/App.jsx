@@ -1,5 +1,6 @@
 
 import { Routes, Route } from "react-router-dom";
+
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -8,27 +9,82 @@ import Interview from "./pages/Interview";
 import Questions from "./pages/Questions";
 import Results from "./pages/Results";
 import Resume from "./pages/Resume";
+import CodingPractice from "./pages/CodingPractice";
+
+import Navbar from "./component/Navbar";
+import ProtectedRoute from "./component/ProtectedRoute";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
+    <>
+      <Navbar />
 
-      <Route path="/login" element={<Login />} />
+      <Routes>
+        {/* Public Routes */}
 
-      <Route path="/signup" element={<Signup />} />
+        <Route path="/" element={<Home />} />
 
-      <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/login" element={<Login />} />
 
-      <Route path="/interview" element={<Interview />} />
+        <Route path="/signup" element={<Signup />} />
 
-      <Route path="/questions" element={<Questions />} />
+        {/* Protected Routes */}
 
-      <Route path="/results" element={<Results />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route path="/resume" element={<Resume />} />
+        <Route
+          path="/interview"
+          element={
+            <ProtectedRoute>
+              <Interview />
+            </ProtectedRoute>
+          }
+        />
 
-    </Routes>
+        <Route
+          path="/questions"
+          element={
+            <ProtectedRoute>
+              <Questions />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/results"
+          element={
+            <ProtectedRoute>
+              <Results />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/resume"
+          element={
+            <ProtectedRoute>
+              <Resume />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/coding-practice"
+          element={
+            <ProtectedRoute>
+              <CodingPractice />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 
