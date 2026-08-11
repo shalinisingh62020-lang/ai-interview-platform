@@ -28,7 +28,7 @@ An AI-powered interview preparation platform that helps students and job seekers
 * 💻 **Coding Practice**
 
   * Multiple coding problems
-  * Test solutions against test cases
+  * Test coding solutions
   * Automatic result evaluation
   * Coding performance feedback
 
@@ -73,15 +73,9 @@ An AI-powered interview preparation platform that helps students and job seekers
 * OpenAI API
 * Judge0 Code Execution API
 
-### Other Tools
+### 📁 Project Structure
 
-* Git
-* GitHub
-* PDF parsing
-
-## 📁 Project Structure
-
-```text
+```text id="d0p4e8"
 ai-interview-platform/
 │
 ├── server/
@@ -111,6 +105,13 @@ ai-interview-platform/
 │   ├── App.jsx
 │   └── main.jsx
 │
+├── screenshots/
+│   ├── home.png
+│   ├── dashboard.png
+│   ├── interview.png
+│   ├── coding-practice.png
+│   └── resume-analysis.png
+│
 ├── package.json
 └── README.md
 ```
@@ -119,65 +120,57 @@ ai-interview-platform/
 
 ### 1. Clone the repository
 
-```bash
+```bash id="xj4q5m"
 git clone git@github.com:shalinisingh62020-lang/ai-interview-platform.git
 cd ai-interview-platform
 ```
 
 ### 2. Install frontend dependencies
 
-```bash
+```bash id="9y8c3v"
 npm install
 ```
 
 ### 3. Install backend dependencies
 
-```bash
+```bash id="l5y7vp"
 cd server
 npm install
 ```
 
 ### 4. Configure environment variables
 
-Create a `.env` file inside the `server` folder.
+Create a `.env` file inside the `server` folder:
 
-```env
+```env id="0d3bqh"
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-5
+OPENAI_MODEL=your_openai_model
 ```
 
-**Never commit your `.env` file or API keys to GitHub.**
+> ⚠️ Never commit your `.env` file or API keys to GitHub.
 
 ### 5. Start the backend
 
 From the `server` folder:
 
-```bash
+```bash id="p5h2b6"
 node Server.js
-```
-
-The backend will run on:
-
-```text
-http://localhost:5000
 ```
 
 ### 6. Start the frontend
 
 Open another terminal in the project root:
 
-```bash
+```bash id="0x7f4q"
 npm run dev
 ```
 
-The frontend will run on the Vite development server.
-
 ## 🔄 Application Flow
 
-```text
+```text id="5u3f2a"
 User
   ↓
 Signup / Login
@@ -185,36 +178,54 @@ Signup / Login
 Dashboard
   ↓
 ┌───────────────────────┐
-│                       │
 │ AI Mock Interview     │
 │ Coding Practice       │
 │ Resume Analysis       │
-│                       │
 └───────────────────────┘
   ↓
-Performance / Feedback
+Performance & Feedback
 ```
+
+## 📸 Project Screenshots
+
+### 🏠 Home Page
+
+![Home Page](screenshots/home.png)
+
+### 📊 Dashboard
+
+![Dashboard](screenshots/dashboard.png)
+
+### 🎤 AI Mock Interview
+
+![AI Mock Interview](screenshots/interview.png)
+
+### 💻 Coding Practice
+
+![Coding Practice](screenshots/coding-practice.png)
+
+### 📄 Resume Analysis
+
+![Resume Analysis](screenshots/resume-analysis.png)
 
 ## 🔒 Security
 
-The application includes:
-
-* JWT authentication
+* JWT-based authentication
 * Password hashing using bcrypt
 * Protected frontend routes
 * Environment variables for API credentials
-* Input validation
-* Code execution limits
+* `.env` excluded through `.gitignore`
+* Secure handling of uploaded files
 
 ## 🎯 Future Improvements
 
 * Real-time AI voice interviews
-* Interview history stored per user
+* Interview history
 * Advanced performance analytics
 * More programming languages
-* Resume recommendations
+* Personalized interview recommendations
 * Job-specific interview preparation
-* Deployment with production database
+* Production deployment
 * Improved AI-generated interview questions
 
 ## 👩‍💻 Author
@@ -227,4 +238,4 @@ B.Tech Computer Science Student
 
 **AI Interview Platform**
 
-Built as a full-stack AI-powered interview preparation project.
+A full-stack AI-powered interview preparation platform built using React, Node.js, MongoDB, and AI APIs.
