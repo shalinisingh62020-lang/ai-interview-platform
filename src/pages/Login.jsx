@@ -20,7 +20,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/login", {
+      const response = await fetch("http://10.199.197.172:5000/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -116,6 +116,14 @@ function Login() {
               />
 
             </div>
+            <div className="text-right mb-6">
+             <Link
+              to="/forgot-password"
+              className="text-blue-600 text-sm font-semibold hover:underline"
+             >
+              Forgot Password?
+            </Link>
+            </div>
 
             {/* Login Button */}
             <button
@@ -164,3 +172,4 @@ function Login() {
 }
 
 export default Login;
+

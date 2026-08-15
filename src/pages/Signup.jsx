@@ -1,32 +1,38 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
-function Login() {
+function Signup() {
   const navigate = useNavigate();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    if (!name || !email || !password) {
       alert("Please fill all fields");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/login", {
+      const response = await fetch("http://localhost:5000/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
+          name,
+          email: email.toLowerCase().trim(),
           password,
         }),
       });
@@ -34,27 +40,16 @@ function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Login failed");
+        alert(data.message || "Signup failed");
         return;
       }
 
-      // Save JWT token
-      localStorage.setItem("token", data.token);
+      alert("Account created successfully 🎉");
 
-      // Save user information
-      if (data.user) {
-        localStorage.setItem(
-          "user",
-          JSON.stringify(data.user)
-        );
-      }
-
-      alert("Login successful 🎉");
-
-      navigate("/dashboard");
+      navigate("/login");
 
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Signup error:", error);
 
       alert(
         "Server error. Please make sure backend is running."
@@ -78,19 +73,36 @@ function Login() {
           </div>
 
           <h1 className="text-3xl font-bold text-gray-800">
-            Welcome Back
+            Create Account
           </h1>
 
           <p className="text-gray-500 mt-2">
-            Login to continue your interview preparation.
+            Create your account to start interview preparation.
           </p>
 
         </div>
 
-        {/* Login Card */}
+        {/* Signup Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
 
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleSignup}>
+
+            {/* Name */}
+            <div className="mb-5">
+
+              <label className="block font-semibold text-gray-700 mb-2">
+                Full Name
+              </label>
+
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+
+            </div>
 
             {/* Email */}
             <div className="mb-5">
@@ -102,9 +114,7 @@ function Login() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -121,39 +131,39 @@ function Login() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                placeholder="Enter your password"
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
 
+              <p className="text-xs text-gray-500 mt-2">
+                Password must be at least 6 characters.
+              </p>
+
             </div>
 
-            {/* Login Button */}
+            {/* Signup Button */}
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
             >
-              {loading
-                ? "Logging in..."
-                : "Login →"}
+              {loading ? "Creating Account..." : "Create Account →"}
             </button>
 
           </form>
 
-          {/* Signup */}
+          {/* Login */}
           <div className="text-center mt-6">
 
             <p className="text-gray-500">
-              Don't have an account?{" "}
+              Already have an account?{" "}
 
               <Link
-                to="/signup"
+                to="/login"
                 className="text-blue-600 font-semibold hover:underline"
               >
-                Create one
+                Login
               </Link>
 
             </p>
@@ -180,4 +190,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Signup;

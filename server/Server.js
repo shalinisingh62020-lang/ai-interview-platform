@@ -1,4 +1,6 @@
+
 import fs from "fs";
+import crypto from "crypto";
 import { PDFParse } from "pdf-parse";
 import multer from "multer";
 import express from "express";
@@ -10,8 +12,25 @@ import Answer from "./models/Answer.js";
 import User from "./models/User.js";
 import OpenAI from "openai";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
 
 dotenv.config();
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
+transporter.verify((error, success) => {
+  if (error) {
+    console.log("EMAIL ERROR ❌");
+    console.log(error);
+  } else {
+    console.log("EMAIL SERVER READY ✅");
+  }
+});
 console.log(
   "JWT_SECRET loaded:",
   !!process.env.JWT_SECRET
@@ -176,6 +195,174 @@ app.post("/login", async (req, res) => {
     });
   }
 });
+// =====================================================
+// FORGOT PASSWORD
+// =====================================================
+
+app.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Please enter your email",
+      });
+    }
+
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email",
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // Save token
+    user.resetToken = resetToken;
+
+    // Token valid for 15 minutes
+    user.resetTokenExpiry = new Date(
+      Date.now() + 15 * 60 * 1000
+    );
+
+    await user.save();
+
+    // Reset link
+    const resetLink =`http://10.199.197.172:5173/reset-password?token=${resetToken}`;
+
+    // Send email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "AI Interview Platform - Reset Password",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+
+          <h2>Password Reset</h2>
+
+          <p>Hello ${user.name},</p>
+
+          <p>
+            We received a request to reset your password.
+          </p>
+
+          <p>
+            Click the button below to create a new password:
+          </p>
+
+          <a
+            href="${resetLink}"
+            style="
+              display: inline-block;
+              padding: 12px 20px;
+              background: #2563eb;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: bold;
+            "
+          >
+            Reset Password
+          </a>
+
+          <p>
+            This link will expire in 15 minutes.
+          </p>
+
+          <p>
+            If you did not request this password reset,
+            you can safely ignore this email.
+          </p>
+
+          <p>
+            Regards,<br>
+            AI Interview Platform
+          </p>
+
+        </div>
+      `,
+    });
+
+    console.log("Password reset email sent to:", user.email);
+
+    res.json({
+      message: "Password reset link sent to your email 📧",
+    });
+
+  } catch (error) {
+    console.error("Forgot password error:", error);
+
+    res.status(500).json({
+      message: "Failed to send password reset email",
+      error: error.message,
+    });
+  }
+});
+// =====================================================
+// RESET PASSWORD
+// =====================================================
+
+app.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        message: "Token and new password are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: {
+        $gt: new Date(),
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      10
+    );
+
+    user.password = hashedPassword;
+
+    // Remove reset token after successful reset
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+
+    await user.save();
+
+    res.json({
+      message: "Password reset successfully 🎉",
+    });
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+
+    res.status(500).json({
+      message: "Password reset failed",
+    });
+  }
+});
+
 // =====================================================
 // SAVE INTERVIEW ANSWERS
 // =====================================================
@@ -383,6 +570,140 @@ ${answerText}
     });
   }
 });
+
+
+// =====================================================
+// ROLE-WISE INTERVIEW QUESTION BANK
+// =====================================================
+
+const questionBank = {
+  "Frontend Developer": [
+    "What is the difference between let, const, and var in JavaScript?",
+    "What is the Virtual DOM in React?",
+    "Explain the difference between props and state in React.",
+    "What is the purpose of the useState Hook?",
+    "What is the purpose of the useEffect Hook?",
+    "What is event delegation in JavaScript?",
+    "What is the difference between == and === in JavaScript?",
+    "How does responsive web design work?",
+    "What is the difference between Flexbox and CSS Grid?",
+    "How would you improve the performance of a React application?",
+  ],
+
+  "Backend Developer": [
+    "What is the difference between authentication and authorization?",
+    "What is a REST API?",
+    "What are HTTP methods and when are they used?",
+    "What is middleware in Express.js?",
+    "What is the difference between SQL and NoSQL databases?",
+    "What is JWT and how is it used for authentication?",
+    "How does password hashing work?",
+    "What is error handling in a backend application?",
+    "What is the difference between synchronous and asynchronous operations in Node.js?",
+    "How would you design a scalable backend API?",
+  ],
+
+  "Full Stack Developer": [
+    "What is the role of a frontend and backend in a full-stack application?",
+    "How does a React frontend communicate with a Node.js backend?",
+    "What is a REST API and how is it used in full-stack applications?",
+    "How does JWT-based authentication work?",
+    "What is CORS and why is it needed?",
+    "What is the difference between SQL and NoSQL databases?",
+    "How would you securely store user passwords?",
+    "What is state management in React?",
+    "How would you debug an API request that is failing?",
+    "How would you deploy a full-stack web application?",
+  ],
+
+  "Python Developer": [
+    "What are the main features of Python?",
+    "What is the difference between a list and a tuple in Python?",
+    "What are Python dictionaries and how are they used?",
+    "What is the difference between == and is in Python?",
+    "What are functions and lambda functions in Python?",
+    "What is exception handling in Python?",
+    "What are Python decorators?",
+    "What is object-oriented programming in Python?",
+    "What is the difference between shallow copy and deep copy?",
+    "How would you optimize a slow Python program?",
+  ],
+
+  "Java Developer": [
+    "What are the main features of Java?",
+    "What is the difference between JDK, JRE, and JVM?",
+    "Explain the four principles of object-oriented programming.",
+    "What is the difference between == and equals() in Java?",
+    "What is method overloading and method overriding?",
+    "What is exception handling in Java?",
+    "What is the difference between an interface and an abstract class?",
+    "What is the Java Collections Framework?",
+    "What is multithreading in Java?",
+    "What is Spring Boot and why is it commonly used?",
+  ],
+
+  "Cybersecurity Analyst": [
+    "What is the difference between a vulnerability, threat, and risk?",
+    "What is phishing and how can users protect themselves?",
+    "What is the purpose of a firewall?",
+    "What is the difference between symmetric and asymmetric encryption?",
+    "What is SQL injection?",
+    "What is Cross-Site Scripting (XSS)?",
+    "What is the principle of least privilege?",
+    "What is multi-factor authentication and why is it important?",
+    "What is the purpose of network scanning in cybersecurity?",
+    "What is the OWASP Top 10?",
+  ],
+};
+// =====================================================
+// RANDOM ROLE-WISE INTERVIEW QUESTIONS
+// =====================================================
+
+app.post("/generate-questions", (req, res) => {
+  try {
+    const { jobRole, experience } = req.body;
+
+    if (!jobRole || !experience) {
+      return res.status(400).json({
+        message: "Job role and experience are required.",
+      });
+    }
+
+    const roleQuestions = questionBank[jobRole];
+
+    if (!roleQuestions) {
+      return res.status(400).json({
+        message: "No question bank found for this job role.",
+      });
+    }
+
+    // Create a copy and shuffle it
+    const shuffledQuestions = [...roleQuestions].sort(
+      () => Math.random() - 0.5
+    );
+
+    // Select 5 random questions
+    const selectedQuestions = shuffledQuestions.slice(0, 5);
+
+    console.log(
+      `Generated ${selectedQuestions.length} questions for ${jobRole} (${experience})`
+    );
+
+    res.json({
+      questions: selectedQuestions,
+      jobRole,
+      experience,
+    });
+
+  } catch (error) {
+    console.error("Question Generation Error:", error);
+
+    res.status(500).json({
+      message: "Failed to generate interview questions.",
+    });
+  }
+});
+
 // =========================================
 // RESUME UPLOAD + PDF TEXT EXTRACTION + ANALYSIS
 // =====================================================
@@ -856,7 +1177,7 @@ try {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
 
   console.log(
     `Server running on port ${PORT}`

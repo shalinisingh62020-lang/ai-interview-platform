@@ -1,6 +1,6 @@
 
 import { Routes, Route } from "react-router-dom";
-
+import ForgotPassword from "./pages/ForgotPassword";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -10,7 +10,7 @@ import Questions from "./pages/Questions";
 import Results from "./pages/Results";
 import Resume from "./pages/Resume";
 import CodingPractice from "./pages/CodingPractice";
-
+import ResetPassword from "./pages/ResetPassword";
 import Navbar from "./component/Navbar";
 import ProtectedRoute from "./component/ProtectedRoute";
 
@@ -27,6 +27,16 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         <Route path="/signup" element={<Signup />} />
+
+        <Route
+         path="/forgot-password"
+         element={<ForgotPassword />}
+         />
+
+         <Route
+          path="/reset-password"
+         element={<ResetPassword />}
+        />
 
         {/* Protected Routes */}
 
